@@ -1,0 +1,300 @@
+---
+title: "Markdown File"
+author: "Hannah Damico"
+date: "`r Sys.Date()`"
+output:
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+# the line below set this as your global chunk
+# anything you run here will apply to all chunks in your markdown
+# this is the best place to load a library
+# echo = TRUE means when we knit this document, the code will be visible
+knitr::opts_chunk$set(echo = TRUE)
+# install a package
+# install.packages("tidyverse")
+# load a library
+library(tidyverse)
+# these libraries below are contained within tidyverse
+# so loading them like this can be redundant, but not harmful
+library(dplyr)
+library(ggplot2)
+?tidyverse
+
+search() # what packages do we have uploaded right now?
+```
+
+
+ <font size="4"> 
+
+
+
+# HTML Document Title {.tabset}
+
+This isn't a tab, but a secondary document title.
+
+You can run a command a few ways
+
+Mac: Command + Return     
+PC: Ctl + Enter     
+
+Insert a code chunk: 
+Mac: Command + Option + i   
+PC: Ctl + Alt + i
+
+
+**Double asterisk makes text bold**   
+__So does double underscore__   
+*Single asterisks make things italicized*    
+_So does single underscore_      
+   
+
+```{r}
+# control + option + i to create a code chunk 
+# Mac users: command + return to run code line that cursor is on
+# PC users: control + enter to run code line that cursor is on
+# comment 1
+```
+
+
+## Help Functions + R Studio Interface - First Tab Title
+
+
+
+```{r}
+# need to understand your library or function more?
+?select
+# want to specify where your function is coming from?
+?dplyr::select
+# why is this useful?
+# load in this package 
+library(MASS)
+# try loading ?select again
+?select
+# now R studio is asking which version of select you want to look at
+?dplyr::select()
+?MASS::select()
+
+# the order that packages are loaded in matters
+# MASS was loaded second, so it's select function will be the default
+
+# What functions are present in dplyr?
+# lsf.str("package:dplyr")
+```
+
+
+
+## Create an R Object - Second Tab Title
+
+### Types of Objects
+
+**Logical**   
+Useful to check the type of object we have   
+TRUE or FALSE
+Sometimes 0 or 1
+
+**Character**    
+Objects in quotations such as: "A", "B", "1", "2" or 'a', 'b', '1', '2'  
+Single or double quotes work, but should be consistent!
+
+**String**     
+A group of characters together in quotes such as: "sAAg", "aBc", "ginko", "KuaiKuai", "t0asta0", "nongSHIM"    
+
+**Factors**
+
+**Numeric**      
+A real number (negative or positive numbers), fractions, or decimals    
+
+
+**Vectors**   
+Two types:   
+
+1. Atomic vectors: Elements are consistent object types, e.g. numerics only or characters only            
+2. List vectors: Elements can be a combination of object types, e.g. numerics + characters         
+
+
+&nbsp;
+&nbsp;
+&nbsp;
+&nbsp;
+
+
+#### How do we save things?
+Use:     
+Arrow: <-    
+Equal sign: =      
+
+Consistency is important for reproducibility and clean code!
+
+
+```{r}
+?class # what is this?
+?typeof # WHAT IS THIS??
+?storage.mode() # WHAT IN THE WORLD IS THIS???
+```
+
+
+
+```{r}
+# Logic 
+# DONT SAVE THINGS TO THE NAMES TRUE AND FALSE
+# We don't see the below example much
+A <- TRUE
+B <- FALSE
+# Character
+char <- "A"
+is.character(char) # are we sure this is a character? Return TRUE or FALSE
+# String
+string1 <- "beans"
+is.character(string1) # Will this be true or false?
+nchar(string1) # how long is our string?
+# Numeric
+num1 <- 1
+num2 <- "2" # Is this a numeric?
+is.numeric(num1)
+is.numeric(num2)
+num3 <- as.numeric(num2) # How about now? What will this return? num2 <- as.numeric(num2)
+
+```
+
+Non-breaking space! 
+
+&nbsp;
+&nbsp;
+
+```{r}
+# Vectors
+vec1 <- c("a", "b", "c")
+vec2 <- c(2,4,5,678,9,10000)
+# So what does c() do?
+# Concatenate! Link things together 
+# What happens when we link these vectors together?
+c(vec1, vec2)
+```
+
+
+```{r}
+# Matrix
+# Why do we get this warning?
+matrix(vec1, nrow = 3)
+# now we have 3 columns and 1 row
+matrix(vec1, ncol = 3)
+# What happens if we give it two instructions, but we run out of vector elements?
+matrix(vec1, ncol = 3, nrow= 2)
+matrix(vec1, nrow = 3, ncol= 2)
+
+# Let's use that second matrix example - we have to save it
+mat <- matrix(vec1, nrow = 3, ncol= 2)
+# let's turn it into something new
+
+# Dataframe
+as.data.frame(mat)
+
+# Let do this another way
+data.frame(vec1,vec1)
+# Notice how the vectors save as columns this way
+# We can also give our columns names!
+data.frame(letters1 = vec1, letters2 = vec1)
+# Or this way, but note that we must save the dataframe first
+df <- data.frame(vec1,vec1)
+colnames(df) <- c("letters1", "letters2")
+# Notice how we used a vector or strings
+```
+
+
+&nbsp;
+&nbsp;
+
+## Viewing your Data - Third Tab Title
+
+
+```{r}
+# where do we read it from?
+?read.csv()
+?read_csv()
+# our working directory!
+getwd() # where is the homebase, the workshop for where our markdown is stored?
+```
+
+## Analysis 
+
+```{r}
+library(readr) # this is in tidyverse!
+# Is anything wrong with this?
+#cytomegalovirus <- read_csv("~/bbc-research/RCR/R-Workshop-Sept2024/cytomegalovirus.csv")
+# View(cytomegalovirus) # note that the document will not knit unless this is commented out 
+
+cyto_data <- read_csv("Data/cytomegalovirus.csv")
+
+# read.csv("Data/cytomegalovirus.csv")
+
+```
+
+
+```{r}
+# Understand our data more
+## What kind of object is our data?
+class(cyto_data)
+## What are the dimensions of our data? How many rows, how many columns
+dim(cyto_data) # 64 rows, 26 columns
+# We can also use 
+nrow(cyto_data) # to only count rows
+ncol(cyto_data) # to only count columns
+# Let's take a glimpse at our data
+glimpse(cyto_data)
+# Notice that we can see the variable types
+# dbl = double and is a number that can include a decimal
+# Here's another option
+str(cyto_data)
+
+# Let's  print out our data this way
+cyto_data
+# try running this in your console and see what happens!
+```
+
+
+```{r}
+# Let's look at the first 10 rows of our data
+head(cyto_data, n= 10)
+
+# what about the last 10 rows?
+tail(cyto_data, n = 10)
+```
+
+
+&nbsp;
+&nbsp;
+
+
+
+
+</font> 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
