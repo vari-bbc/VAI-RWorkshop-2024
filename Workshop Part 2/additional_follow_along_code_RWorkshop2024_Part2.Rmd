@@ -1,0 +1,436 @@
+---
+title: "R Workshop 2024"
+author: "Hannah Damico"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE) # tell them about echo = TRUE vs. echo = FALSE
+library(dplyr) # - filter(), select(), mutate(), group_by/summarize(), arrange()
+library(readr) # read_csv()
+library(ggplot2) # ggplot(), geom_point(), geom_bar()
+```
+
+
+
+# Understanding Your Data {.tabset}
+
+## Reading & Viewing Data 
+
+Create a code chunk:     
+Mac: Command + Option + i     
+PC: Control + Alt + i     
+
+#### Read Data In 
+
+```{r}
+# Is anything wrong with this?
+# Yes it can't find the path because the data is in a different folder
+# cytomegalovirus <- read_csv("~/bbc-research/RCR/R-Workshop-Sept2024/cytomegalovirus.csv")
+# View(cytomegalovirus) # note that the document will not knit unless this is commented out 
+
+
+# What is different between these?
+cyto_data <-
+read_csv(file = "/varidata/researchtemp/hpctmp/r_basics_2024/cytomegalovirus.csv")
+# str(cyto_data)
+cyto_data2 <- read.csv(file = "/varidata/researchtemp/hpctmp/r_basics_2024/cytomegalovirus.csv")
+# str(cyto_data2)
+# read.csv will specify if you have an integer (no decimals)
+```
+
+
+#### What kind of object do we have?
+Notice how we get a little more information than we need, this is due to the function we used to read in our data. 
+"read_csv()" from the readr package assigns its own datatype called a tibble which can be treated more or less like a dataframe. Tibbles tend to load faster than a typical dataframe, though we likely won't notice a difference with as small as this dataset is. 
+
+```{r}
+# Understand our data more
+## What kind of object is our data?
+class(cyto_data)
+class(cyto_data2)
+```
+
+#### How many rows and columns does our data have? 
+
+```{r}
+## What are the dimensions of our data? How many rows, how many columns
+dim(cyto_data) # 64 rows, 26 columns
+# We can also use 
+nrow(cyto_data) # to only count rows
+ncol(cyto_data) # to only count columns
+```
+
+
+#### What does our data structure look like? 
+
+```{r}
+# Let's take a glimpse at our data
+glimpse(cyto_data)
+# Notice that we can see the variable types
+# dbl = double and is a number that can include a decimal
+# Here's another option
+str(cyto_data)
+
+# Let's  print out our data this way
+cyto_data
+# try running this in your console and see what happens!
+```
+
+
+#### Can we see the top and bottom of our dataframe?
+
+```{r}
+# Let's look at the first 10 rows of our data
+head(cyto_data, n= 10)
+
+# what about the last 10 rows?
+tail(cyto_data, n = 10)
+```
+
+
+&nbsp;
+&nbsp;
+
+
+## New Skills {.tabset}
+
+### Identify Variable Types
+
+Now that we have our example data lined up, let's look at some of the variables and understand their structure.
+
+```{r}
+# Let's introduce a new function to look at the names of our variables
+colnames(cyto_data)
+```
+
+
+Categorical variables:
+nominal     
+ordinal   
+
+```{r}
+# categorical variables are characters or strings, like we learned last week
+# we consider two kinds of these
+# some where order matters and some where it doesn't
+# A nominal variable is a categorical variable where there's no particular order
+# In our data, this could be diagnosis
+# here's a new function that shows us the total counts of observations in each group
+table(cyto_data$diagnosis)
+# but this could also mean prior radiation 
+# this variable is an instance of a binary variable where R is understanding its structure to be numeric, but we recognize that these are really two groups of 1 = "Yes prior radiation" and 0 = "No prior radiation". This is also an example of a logical variable type where 1 = TRUE and 0 = FALSE
+table(cyto_data$prior.radiation)
+
+# categorical variables variables are defaulted to sort into alphabetical order by R
+# Want to see something wacky? This might be fun to explore on your own, but we won't go into details today
+# share this with them depending on time left
+v <- c("1", "8", "6", "2", "33", "115")
+sort(v)
+```
+
+ordinal variables
+
+```{r}
+# What about when our variable does have order? 
+# take prior.chemo for example
+# number of prior chemo treatments in patients ranges from 0-8
+# This means that 8 treatments differs from 0 treatments on an incremental level
+# We like to give R some help in handling variables like this by changing them to something called a factor
+# A factor is similar to a character string variable, how
+table(cyto_data$prior.chemo)
+# let's save this variable as a factor so that R knows we want this order to matter
+# best way to achieve this:
+cyto_data$prior.chemo <- factor(cyto_data$prior.chemo, levels = 0:8)
+# c(0,1,2,3,4,5,6,7,8)
+# let's check it
+# revisit the str() function
+str(cyto_data$prior.chemo)
+```
+
+Notice how prior.chemo is a variable of numbers that can be treated as a categorical variable. This happens sometimes! This is why it's important to pay attention to your data.
+
+Continuous Variables
+
+```{r}
+# continuous variables can take on an infinite number of values within a range
+# think about age, the average lifespan of a human is around 82 years (this is extremely general considering there are so many factors that play into this)
+# So we can think of age range overall to be 1 day - 82 years (29,930 days)
+# Maybe we have a study limited to only women in their 50s
+# then our age range might be between 50-59
+# how can we get a quick check?
+summary(cyto_data$age)
+# Another example, notice how we have NAs as an added column 
+# Notice the range change
+summary(cyto_data$CD3.dose)
+```
+
+
+### Variable Selection 
+
+Today we're going to focus on a handful variables of interest: 
+ID - patient ID     
+TNC.dose - dose amount of TNC cells    
+CD3.dose - dose amount of CD3 cells    
+age - numeric         
+prior.chemo - ordinal, number of prior chemo treatments       
+prior.radiation - binary, nominal variable, number of prior radiation treatments        
+
+You're going to learn two new things here:     
+select() function from dplyr package    
+pipe operator %>%       
+Mac shortcut: Command + shift + M      
+PC shortcut: Cntrl + shift + M       
+
+```{r}
+# the order you select the variables designates how you see them in the dataframe
+# we want to save a new dataframe to preserve the variable selection
+# here, we're using the dplyr package function select
+cyto_data_selected <- cyto_data %>%  
+  select(ID, TNC.dose, CD3.dose, age, prior.chemo, prior.radiation)
+```
+
+## Missing Value and Outlier Detection
+
+#### Missing Data
+
+```{r fig.width=7, fig.height=8}
+library(DataExplorer) # here's a new package!
+plot_missing(cyto_data)
+# let's look at CD8.dose more closely
+summary(cyto_data$CD8.dose)
+# we have 13 missing values
+# how we handle those depends on a multitude of factors and could be its own lecture
+# today, we'll just note that we shouldn't completely ignore missingness and keep it in mind for the future
+```
+
+Table function in R
+https://www.rdocumentation.org/packages/base/versions/3.6.2/topics/table
+
+```{r}
+# go back to the prior.radiation variable
+# lets look at a table of those binary values again
+table(cyto_data_selected$prior.radiation)
+# now show them what it looks like with this in there
+# , useNA = "ifany" <- this is way more intuitive!
+# , exclude = "ifany"
+```
+
+We don't always want to filter missing values out immediately because we could lose vital information that didn't need to be removed.
+
+
+
+
+
+#### Outlier Detection
+
+```{r}
+# lets pick a variable that we usually want to understand
+# age for instance
+# look at the summary again,
+# point out the max age range, 1000? what? no vampires in this data
+# in honor of spooky season
+summary(cyto_data$age)
+# remember that we have to save a new object if we want the filter to stick around, similar to select
+cyto_data_filtered <- cyto_data_selected %>% filter(age < 1000)
+
+summary(cyto_data_filtered$age)
+# this doesn't always work, maybe we have an age in the 3rd quartile that's still dragging our age distribution too wide. This is why we need to double check that our filtration is doing what we ask of it 
+```
+
+
+```{r}
+# TELL THEM NOT TO FOLLOW THIS CODE
+ex_outlier_plot <- cyto_data %>%  ggplot() + geom_point(aes( y = CD8.dose, x = CD34.dose)) + theme_bw()
+# saveRDS(ex_outlier_plot, "example_outlier_plot.rds")
+```
+
+This is a good example of how we can't be entirely certain if we're looking at an outlier. While it looks like one right away, we should do some extra digging into the study where our data came from. Were we given a range of possible CD34 doses that patients may have undergone in this study? Is 12.6 within that range or was this possibly a clerical error. These are the questions we should be asking when seeing our data so closely. 
+
+## Let's do some plots!
+
+So how did I make that CD34 dose vs. CD8 dose plot anyways?
+
+**LEARNING SOMETHING NEW**   
+
+```{r}
+# when we want to make a plot with more aesthetics than base R provides, we can use the ggplot2
+# notice that my lines within my ggplot always end with a +
+# R will not allow you to being a line with a pip or a + because it gets confused what you're asking for
+# start with your data
+# this tells R to access information from this dataframe
+  # next, give R a function to execute, when we want to  make a plot, we need to tell R to start 
+    # next use your plot rendering function
+  # geom_point() tells us what kind of plot we want ggplot to make with our data
+  # next we have an extra step
+  # if we want to use variables that come from our data, we need to give it an extra function
+  # this is called an aesthetic and is used in your plot type function
+cyto_data %>%
+  ggplot(aes(x = CD34.dose, y = CD8.dose)) +
+  geom_point() +
+  theme_bw()
+# I'm adding theme_bw() as an example of how you can change the default theme. This one shows the values a little better in my opinion
+```
+
+What if we wanted to estimate a line of best fit through this data?
+Now this is just a best guess type of line using a linear model method, but notice how that straggler had an effect on where that line went. This is something to pay attention to in your data before you model. 
+
+```{r}
+cyto_data %>%
+  ggplot(aes(x = CD34.dose, y = CD8.dose)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = F) +
+  theme_bw()
+```
+
+
+#### Cateorical plotting
+
+```{r}
+# how about making a plot for those categorical variables? 
+# geom_point needs at least 1 continuous variable, but geom_bar can take 
+
+cyto_data %>% 
+  ggplot(aes(x = prior.chemo)) +
+  geom_bar() + 
+  ggtitle("Chemo Treatments in Grouped Cancer Types") + 
+  xlab("Number of Treatments") + 
+  ylab("Total Patients") + 
+  theme_bw()
+
+```
+
+New content: %in% function 
+
+This function is asking R to only grab information from a that is contained in b
+
+a %in% b
+
+```{r}
+# notice how we have a little missing value group there
+# in this case, let's do some work to prior.chemo
+# we only want to show the levels 0-8 of this factor, so what function can we utilize here?
+
+cyto_data %>% 
+  filter(prior.chemo %in% 0:8)  %>% 
+  ggplot(aes(x = prior.chemo)) +
+  geom_bar() + 
+  ggtitle("Number of Prior Chemo Treatments") + 
+  theme_bw()
+```
+
+Next, why don't we add a little filled color to this. Maybe we're interested in the number of prior chemo treatments split by cancer diagnosis type
+
+With barchart, the fill option will let you fill those bars up with color rather than just an outline
+
+Now we're seeing the proportion of treatment amounts broken down by cancer type. Look closely at the bar for a total of 3 chemo treatments. We observe that acute myeloid leukemia seems to make up the largest number of patients who underwent 3 treatments of chemo
+
+```{r}
+cyto_data %>% 
+  filter(prior.chemo %in% 0:8)  %>% 
+  ggplot(aes(x = prior.chemo, 
+             fill = diagnosis)) +
+  geom_bar() + 
+  ggtitle("Number of Prior Chemo Treatments") + 
+  theme_bw()
+```
+
+
+## Analysis 
+
+Code this line by line
+Note that we *do* care about the missing values in prior radiation, but for now, we want a plot that excludes these from our groups 
+
+```{r}
+cyto_data %>% 
+  filter(prior.radiation %in% c(0,1)) %>% 
+  ggplot(aes(x = TNC.dose, y = CD3.dose, color = sex)) + 
+  geom_point() + 
+  geom_smooth(method = "lm", se = F) + 
+  facet_grid(.~prior.radiation) +  # this will be new!
+  xlab("TNC Dose") + ylab("CD3 Dose") + ggtitle("Dosage by Radiation Exposure") + 
+  theme_bw()
+```
+
+
+
+##### What have you learned today?     
+Outlier     
+Missing values     
+Different variable types     
+Categorical vs. Continuous variable      
+Nominal vs. Ordinal      
+Factor vs. Character      
+Advantages to a factor vs. a character      
+Tidyverse – decide which packages address your project goals    
+Readr: read_csv - done       
+Dplyr: filter, select, mutate, group_by/summarize, arrange       
+ggplot: point, boxplot, histogram, barchart     
+
+
+&nbsp;
+&nbsp; 
+
+
+
+## Fun Extras :) 
+
+
+#### Change colors in your plot manually
+
+This website has HMTL hex color codes that you can use as values for colors!      
+https://htmlcolorcodes.com/     
+
+- The *scale_color_manual()* function is from the ggplot2 package      
+
+- With *geom_point()*, we use *color = {variable}* to color by a variable, note that when we use the *scale_color_manual()* function, we have color in the name of the function       
+
+- When we made a barchart with *geom_bar*, we used the *fill = {variable}* option to fill the bars with color, this means if we wanted to manually change the bar colors, we'd want to use *scale_fill_manual()* instead     
+
+```{r}
+# change colors in your plot 
+
+cyto_data %>% 
+  filter(prior.radiation %in% c(0,1)) %>% 
+  ggplot(aes(x = TNC.dose, y = CD3.dose, color = sex)) + 
+  geom_point() + 
+  geom_smooth(method = "lm", se = F) + 
+  scale_color_manual(values = c("orchid", "#8aa28d")) +  # function is from ggplot2 package
+  facet_grid(.~prior.radiation) +  # this will be new!
+  xlab("TNC Dose") + ylab("CD3 Dose") + ggtitle("Dosage by Radiation Exposure") + 
+  theme_bw()
+
+```
+
+
+
+##### Another option is the Viridis package
+
+- The function *scale_color_viridis_d()* is conveniently loaded with the ggplot2 package!     
+
+- The *_d* portion of this stands for "discrete" and is used when the variable to be colored has groups, sex having 2 groups in this case      
+
+- Try running *?scale_color_viridis_d* in your console to read more about arguments you can change within this function     
+
+- Here, I give an example of "option = "E"" to change which Viridis color scale I want to use, check out this link for more information: https://cran.r-project.org/web/packages/viridis/vignettes/intro-to-viridis.html     
+
+- The direction that *ggplot() + geom_point()* uses the viridis color scale E is then reversed using the "direction = -1" argument. This means that the first group of the sex variable will be colored using the last color code of the color scale E.      
+
+- Viridis color scales are known on an A-F scale or as “magma”, “plasma”, “inferno”, “civids”, “mako”, and “rocket”
+
+```{r}
+# If you have package issues, try these instructions:
+# install.packages("viridis") # remove the first # and run this first, then replace the #
+library(viridis) # next load the library 
+
+cyto_data %>% 
+  filter(prior.radiation %in% c(0,1)) %>% 
+  ggplot(aes(x = TNC.dose, y = CD3.dose, color = sex)) + 
+  geom_point() + 
+  scale_color_viridis_d(direction =-1, option = "E") +
+  #scale_color_manual(values = c("orchid", "#8aa28d")) +  # function is from ggplot2 package
+  facet_grid(.~prior.radiation) +  # this will be new!
+  xlab("TNC Dose") + ylab("CD3 Dose") + ggtitle("Dosage by Radiation Exposure") + 
+  theme_bw()
+
+```
